@@ -6,18 +6,24 @@ import io.github.openboatutils.protocol.channels.OBUSettingsPacket;
 import io.gitlab.icestom.icestom.IceStom;
 import io.gitlab.icestom.icestom.entity.IceStomPlayer;
 import io.gitlab.icestom.icestom.timetrial.lap.TimedLap;
+import io.gitlab.icestom.icestom.track.PositionConverter;
 import io.gitlab.icestom.icestom.track.Track;
 import io.gitlab.icestom.icestom.track.TickMovement;
 import io.gitlab.icestom.icestom.track.colliders.CrossCollider;
 import io.gitlab.icestom.icestom.track.colliders.InsideCollider;
 import io.gitlab.icestom.stomtrack.EnvironmentFile;
+import io.gitlab.icestom.stomtrack.TrackDisplay;
 import net.hollowcube.polar.PolarLoader;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
+import net.minestom.server.entity.Entity;
+import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.Player;
+import net.minestom.server.entity.metadata.display.AbstractDisplayMeta;
+import net.minestom.server.entity.metadata.display.TextDisplayMeta;
 import net.minestom.server.event.item.ItemDropEvent;
 import net.minestom.server.event.player.PlayerBlockBreakEvent;
 import net.minestom.server.event.player.PlayerBlockPlaceEvent;
@@ -49,6 +55,8 @@ public abstract class TrackInstance extends BoatInstance implements SpawnLocatio
 
     private boolean defaultRegions = false;
 
+    private boolean displaysSpawned = false;
+
     public TrackInstance(Track track) {
         super(Key.key(IceStom.NAMESPACE, "track/" + track.getEnvironmentId()), getDimensionKey(track.getEnvironmentData()));
 
@@ -61,9 +69,87 @@ public abstract class TrackInstance extends BoatInstance implements SpawnLocatio
         eventNode().addListener(PlayerBlockPlaceEvent.class, event -> event.setCancelled(true));
     }
 
+    /**
+     * Spawns the track's decorative display entities (see {@link TrackDisplay}).
+     *
+     * <p>These are world decorations, not tick-evaluated features: they are spawned once when the
+     * instance is built and always render (no region/trigger subscription, no per-player state).
+     * Being entities keeps them compatible with the immutable Polar world model. They are cleaned
+     * up automatically when the instance is unregistered along with all other entities.</p>
+     */
+    private void spawnDisplays() {
+        for (TrackDisplay display : track.getDisplays()) {
+            if (display instanceof TrackDisplay.TextDisplay textDisplay) {
+                spawnTextDisplay(textDisplay);
+            } else {
+                // Future variants (block_display, item_display) land here; ignore for now.
+                log.warn("Skipping unsupported display type {} on track {}",
+                        display.getClass().getSimpleName(), track.getId());
+            }
+        }
+    }
+
+    private void spawnTextDisplay(TrackDisplay.TextDisplay definition) {
+        Pos position = PositionConverter.fromVec3(definition.position()).asPosition();
+
+        Entity entity = new Entity(EntityType.TEXT_DISPLAY);
+        entity.setNoGravity(true);
+
+        TextDisplayMeta meta = (TextDisplayMeta) entity.getEntityMeta();
+
+        // Raw transform applied verbatim (no euler decomposition).
+        meta.setTranslation(PositionConverter.fromVec3(definition.translation()));
+        meta.setLeftRotation(definition.leftRotation().toArray());
+        meta.setRightRotation(definition.rightRotation().toArray());
+        meta.setScale(PositionConverter.fromVec3(definition.scale()));
+
+        meta.setText(definition.text());
+        meta.setBillboardRenderConstraints(toBillboard(definition.billboard()));
+        meta.setAlignment(toAlignment(definition.alignment()));
+        meta.setTextOpacity(definition.textOpacity());
+        meta.setSeeThrough(definition.seeThrough());
+        meta.setShadow(definition.shadow());
+        meta.setLineWidth(definition.lineWidth());
+
+        // A negative background color means "use the client default background".
+        if (definition.backgroundColor() < 0) {
+            meta.setUseDefaultBackground(true);
+        } else {
+            meta.setUseDefaultBackground(false);
+            meta.setBackgroundColor(definition.backgroundColor());
+        }
+
+        entity.setInstance(this, position);
+    }
+
+    private static AbstractDisplayMeta.BillboardConstraints toBillboard(TrackDisplay.Billboard billboard) {
+        return switch (billboard) {
+            case FIXED -> AbstractDisplayMeta.BillboardConstraints.FIXED;
+            case VERTICAL -> AbstractDisplayMeta.BillboardConstraints.VERTICAL;
+            case HORIZONTAL -> AbstractDisplayMeta.BillboardConstraints.HORIZONTAL;
+            case CENTER -> AbstractDisplayMeta.BillboardConstraints.CENTER;
+        };
+    }
+
+    private static TextDisplayMeta.Alignment toAlignment(TrackDisplay.Alignment alignment) {
+        return switch (alignment) {
+            case LEFT -> TextDisplayMeta.Alignment.LEFT;
+            case CENTER -> TextDisplayMeta.Alignment.CENTER;
+            case RIGHT -> TextDisplayMeta.Alignment.RIGHT;
+        };
+    }
+
     @Override
     public void tick(long time) {
         super.tick(time);
+
+        if (!displaysSpawned) {
+            // Deferred to the first tick: by now the instance is registered and chunk-ready, so
+            // Entity#setInstance is safe. Runs regardless of which registration path (time trial,
+            // race stage, ...) created this instance.
+            displaysSpawned = true;
+            spawnDisplays();
+        }
 
         Map<Player, TickMovement> movementMap = new HashMap<>();
 

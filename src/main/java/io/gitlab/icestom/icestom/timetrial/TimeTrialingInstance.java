@@ -6,6 +6,7 @@ import io.gitlab.icestom.icestom.command.BoatCommand;
 import io.gitlab.icestom.icestom.config.IceStomConfig;
 import io.gitlab.icestom.icestom.database.TimetrialDatabase;
 import io.gitlab.icestom.icestom.entity.Boat;
+import io.gitlab.icestom.icestom.entity.IceStomPlayer;
 import io.gitlab.icestom.icestom.entity.TimetrialLeaderboard;
 import io.gitlab.icestom.icestom.instance.BoatedTrackInstance;
 import io.gitlab.icestom.icestom.instance.SpawnLocation;
@@ -35,6 +36,7 @@ import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.network.packet.server.common.PluginMessagePacket;
+import net.minestom.server.tag.Tag;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,8 +68,9 @@ public class TimeTrialingInstance extends BoatedTrackInstance implements SpawnLo
 
     private final Map<UUID, Pos> practicePoints = new HashMap<>();
 
-    private final ItemStack RESET_ITEM = ItemStack.of(Objects.requireNonNull(Material.fromKey(IceStomConfig.getConfig().icestom.reset_item)))
-            .withCustomName(Component.text("Reset", NamedTextColor.RED).style(Style.style().decoration(TextDecoration.ITALIC, false)));
+    // Tag-based identity (not the == check the other items use) lets a player pick any material,
+    // even one matching another action item, without breaking reset detection.
+    private static final Tag<Boolean> RESET_TAG = Tag.Boolean("icestom:reset_item");
 
     private final ItemStack BOAT_ITEM = ItemStack.of(Material.OAK_BOAT)
             .withCustomName(Component.text("Boat", NamedTextColor.GREEN).style(Style.style().decoration(TextDecoration.ITALIC, false)));
@@ -107,7 +110,7 @@ public class TimeTrialingInstance extends BoatedTrackInstance implements SpawnLo
             final Player player = event.getPlayer();
             final ItemStack itemStack = event.getItemStack();
 
-            if (itemStack == RESET_ITEM) {
+            if (isResetItem(itemStack)) {
                 resetPlayer(player);
             } else if (itemStack == BOAT_ITEM) {
                 BoatCommand.spawnBoat(player);
@@ -130,7 +133,7 @@ public class TimeTrialingInstance extends BoatedTrackInstance implements SpawnLo
 
             event.setCancelled(true);
 
-            if (itemStack == RESET_ITEM) {
+            if (isResetItem(itemStack)) {
                 resetPlayer(player);
             } else if (itemStack == BOAT_ITEM) {
                 BoatCommand.spawnBoat(player);
@@ -299,10 +302,35 @@ public class TimeTrialingInstance extends BoatedTrackInstance implements SpawnLo
         PlayerInventory inventory = player.getInventory();
 
         inventory.clear();
-        inventory.setItemStack(0, RESET_ITEM);
+        inventory.setItemStack(0, resetItemFor(player));
         inventory.setItemStack(1, BOAT_ITEM);
         inventory.setItemStack(2, PRACTICE_ITEM);
         inventory.setItemStack(8, SPAWN_ITEM);
+    }
+
+    private static boolean isResetItem(ItemStack itemStack) {
+        return Boolean.TRUE.equals(itemStack.getTag(RESET_TAG));
+    }
+
+    private static ItemStack resetItemFor(Player player) {
+        Material material = null;
+
+        if (player instanceof IceStomPlayer icePlayer) {
+            material = icePlayer.getResetItem();
+        }
+
+        if (material == null) {
+            material = Material.fromKey(IceStomConfig.getConfig().icestom.reset_item);
+        }
+
+        if (material == null) {
+            material = Material.BARRIER;
+        }
+
+        return ItemStack.of(material)
+                .withCustomName(Component.text("Reset", NamedTextColor.RED)
+                        .style(Style.style().decoration(TextDecoration.ITALIC, false)))
+                .withTag(RESET_TAG, true);
     }
 
     public @Nullable TimedLap getTimedLap(Player player) {

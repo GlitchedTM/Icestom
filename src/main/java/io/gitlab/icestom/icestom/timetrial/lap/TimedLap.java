@@ -4,6 +4,7 @@ import io.gitlab.icestom.icestom.timetrial.Split;
 import io.gitlab.icestom.icestom.track.Track;
 import io.gitlab.icestom.icestom.util.TextFormatter;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import net.minestom.server.coordinate.Pos;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,25 +74,45 @@ public class TimedLap implements TimedLapResultSource {
         return worldAge * 50 - getMsStart();
     }
 
-    public Component getActionBar(long worldAge) {
+    private static final TextColor CHECKPOINT_PROGRESS_COLOR = TextColor.color(0xFF5FD7);
+    private static final TextColor FINISH_COLOR = TextColor.color(0xFFD54A);
+    private static final Component ACTION_BAR_SEPARATOR = Component.text("   ");
+
+    public Component getActionBar(long worldAge, boolean showDeltas) {
         long time = Math.max(0, worldAge * 50 - getMsStart());
 
         float t_seconds = (float) Math.ceil((float) time / 50) * 50 / 1000;
 
         Component text = Component.text(String.format("%.2f", t_seconds));
 
-        if (bestPreviousResult != null) {
-            if (lastReachedCheckpoint != 0) {
-                text = text
-                        .append(Component.space())
-                        .append(TextFormatter.getDelta(recentSplit));
-            } else {
-                text = text
-                        .append(Component.space());
-            }
+        if (bestPreviousResult != null && showDeltas && lastReachedCheckpoint != 0) {
+            text = text
+                    .append(ACTION_BAR_SEPARATOR)
+                    .append(TextFormatter.getDelta(recentSplit));
         }
 
-        return text;
+        return text
+                .append(ACTION_BAR_SEPARATOR)
+                .append(checkpointProgress());
+    }
+
+    private Component checkpointProgress() {
+        int reached = Math.max(0, lastReachedCheckpoint);
+        int total = track.getScoredCheckpointCount();
+
+        Component denominator = reached >= total
+                ? Component.text("FINISH", FINISH_COLOR)
+                : Component.text("C" + total, CHECKPOINT_PROGRESS_COLOR);
+
+        return Component.text("C" + reached + " / ", CHECKPOINT_PROGRESS_COLOR)
+                .append(denominator);
+    }
+
+    /** Non-looped tracks only: whether the last reached checkpoint is the finish line. */
+    public boolean isAtFinishLine() {
+        if (track.isLooped()) return false;
+
+        return lastReachedCheckpoint > 0 && track.isLastCheckpoint(lastReachedCheckpoint);
     }
 
     public long getMsStart() { return msStart; }

@@ -52,6 +52,11 @@ public class MutableTrackFile implements TrackFile {
 
     @NotNull private Map<String, Location> locations;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JsonSerialize(using = DisplayListSerde.Serializer.class)
+    @JsonDeserialize(using = DisplayListSerde.Deserializer.class)
+    @NotNull private List<TrackDisplay> displays = new ArrayList<>();
+
     public MutableTrackFile() {}
 
     public MutableTrackFile(@NotNull String id, @NotNull Component name, boolean looped, @NotNull Location spawnLocation) {
@@ -66,6 +71,7 @@ public class MutableTrackFile implements TrackFile {
         this.regions = new HashMap<>();
         this.triggers = new HashMap<>();
         this.locations = new HashMap<>();
+        this.displays = new ArrayList<>();
     }
 
     public MutableTrackFile(TrackFile track) {
@@ -80,6 +86,7 @@ public class MutableTrackFile implements TrackFile {
         regions = track.getRegions();
         triggers = track.getTriggers();
         locations = track.getLocations();
+        displays = track.getDisplays();
     }
 
     public void setId(@NotNull String id) { this.id = id; }
@@ -92,6 +99,8 @@ public class MutableTrackFile implements TrackFile {
     public void setOpenBoatUtils(@NotNull List<OBUSettingsPacket> openBoatUtils) { this.openBoatUtils = openBoatUtils; }
     public void setRegions(@NotNull Map<TrackRegion, Set<String>> regions) { this.regions = regions; }
     public void setTriggers(@NotNull Map<TrackTrigger, Set<String>> triggers) { this.triggers = triggers; }
+    public void setLocations(@NotNull Map<String, Location> locations) { this.locations = locations; }
+    public void setDisplays(@NotNull List<TrackDisplay> displays) { this.displays = displays; }
 
     public void setVersion(int version) { this.version = version; }
 
@@ -110,6 +119,7 @@ public class MutableTrackFile implements TrackFile {
     @Override public @NotNull Map<TrackRegion, Set<String>> getRegions() { return regions; }
     @Override public @NotNull Map<TrackTrigger, Set<String>> getTriggers() { return triggers; }
     @Override public @NotNull Map<String, Location> getLocations() { return locations; }
+    @Override public @NotNull List<TrackDisplay> getDisplays() { return displays; }
 
     @Override public int getVersion() { return version; }
 }

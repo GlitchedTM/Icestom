@@ -7,6 +7,7 @@ import io.gitlab.icestom.icestom.track.colliders.CrossCollider;
 import io.github.openboatutils.protocol.channels.OBUSettingsPacket;
 import io.gitlab.icestom.icestom.track.colliders.InsideCollider;
 import io.gitlab.icestom.stomtrack.EnvironmentFile;
+import io.gitlab.icestom.stomtrack.TrackDisplay;
 import io.gitlab.icestom.stomtrack.TrackFile;
 import net.hollowcube.polar.PolarWorld;
 import net.kyori.adventure.text.Component;
@@ -33,6 +34,7 @@ public class Track {
     private final Map<InsideCollider, Set<String>> regions;
     private final Map<CrossCollider, Set<String>> triggers;
     private final Map<String, Pos> locations;
+    private final List<TrackDisplay> displays;
     private final EnvironmentFile trackEnvironmentData;
 
     private final Map<Integer, List<CrossCollider>> checkpoint_lookup = new HashMap<>();
@@ -54,6 +56,7 @@ public class Track {
         this.regions = RegionConverter.fromRegionDef(trackFile.getRegions());
         this.triggers = TriggerConverter.fromTriggerDef(trackFile.getTriggers());
         this.locations = LocationConverter.fromLocationDef(trackFile.getLocations());
+        this.displays = List.copyOf(trackFile.getDisplays());
         this.trackEnvironmentData = environmentData;
 
         this.world = world;
@@ -100,6 +103,16 @@ public class Track {
 
     public @NonNull Map<CrossCollider, Integer> getCheckpoints() { return checkpoints; }
 
+    /**
+     * Checkpoints excluding the start line, and (non-looped only) the separate finish line. On a
+     * looped track the finish is the start line, so only the start is excluded.
+     */
+    public int getScoredCheckpointCount() {
+        int scored = looped ? wrapIndex - 1 : wrapIndex - 2;
+
+        return Math.max(0, scored);
+    }
+
     public @NonNull List<Pos> getGridLocations() {
         return gridLocations;
     }
@@ -121,6 +134,8 @@ public class Track {
     public Map<CrossCollider, Set<String>> getTriggers() { return triggers; }
 
     public Map<String, Pos> getLocations() { return locations; }
+
+    public @NonNull List<TrackDisplay> getDisplays() { return displays; }
 
     public PolarWorld getWorld() { return world; }
 }

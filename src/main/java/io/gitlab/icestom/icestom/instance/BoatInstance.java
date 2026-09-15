@@ -2,6 +2,7 @@ package io.gitlab.icestom.icestom.instance;
 
 import io.gitlab.icestom.icestom.entity.Boat;
 import io.gitlab.icestom.icestom.entity.GridBoatHolder;
+import io.gitlab.icestom.icestom.entity.IceStomPlayer;
 import net.kyori.adventure.key.Key;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
@@ -67,7 +68,9 @@ public abstract class BoatInstance extends IceStomInstance {
     public Boat createBoat(Player player, Pos pos) {
         removeBoat(player);
 
-        Boat boat = new Boat();
+        Boat boat = player instanceof IceStomPlayer icePlayer
+                ? new Boat(icePlayer.getBoatType())
+                : new Boat();
         boats.put(player, boat);
 
         if (player.getInstance() == this) {
@@ -78,6 +81,11 @@ public abstract class BoatInstance extends IceStomInstance {
 
                         boat.setInstance(this, pos);
                         boat.addPassenger(player);
+
+                        // Force the owner to see their own boat. A hideplayers viewer rule
+                        // suppresses boats during auto-view, so the rider's own boat must be
+                        // added explicitly or it never renders for them.
+                        boat.addViewer(player);
                     })
                     .expireCount(1)
                     .build();
@@ -86,6 +94,8 @@ public abstract class BoatInstance extends IceStomInstance {
         } else {
             boat.setInstance(this, pos);
             boat.addPassenger(player);
+
+            boat.addViewer(player);
         }
 
         player.teleport(pos.withPitch(player.getPosition().pitch()));

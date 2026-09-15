@@ -11,7 +11,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class Boat extends Entity {
     public Boat() {
-        super(EntityType.OAK_BOAT);
+        this(EntityType.OAK_BOAT);
+    }
+
+    public Boat(@NotNull EntityType type) {
+        super(type);
 
         hasPhysics = false;
 

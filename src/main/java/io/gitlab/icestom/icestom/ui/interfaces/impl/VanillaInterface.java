@@ -54,6 +54,14 @@ public class VanillaInterface implements InterfaceProvider {
             1f,
             1f
     );
+
+    // Full finishes only, not partial checkpoint runs.
+    private static final Sound TRACK_COMPLETE = Sound.sound(
+            Key.key("entity.ender_dragon.death"),
+            Sound.Source.MASTER,
+            1f,
+            1f
+    );
     private static final Logger log = LoggerFactory.getLogger(VanillaInterface.class);
 
     private static final BossBarPacket.Action addEmptyBossbar = new BossBarPacket.AddAction(Component.empty(), 0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS, AdventurePacketConvertor.getBossBarFlagValue(List.of()));
@@ -156,12 +164,25 @@ public class VanillaInterface implements InterfaceProvider {
 
             eventNode().addListener(TimedLapCheckpointAdvancedEvent.class, event -> {
                 final Player player = event.getPlayer();
+
+                if (player instanceof IceStomPlayer icePlayer && !icePlayer.getCheckpointAnnouncements()) {
+                    return;
+                }
+
                 final TimedLap lap = event.getLap();
+
+                // The completion message already covers the finish crossing.
+                if (lap.isAtFinishLine()) {
+                    return;
+                }
+
                 final TimedLapResultSource result = lap.getBestPreviousResult();
 
                 final int checkpoint = lap.getLastReachedCheckpoint();
 
-                if (result != null && result.splits().size() > checkpoint && checkpoint != 0) {
+                final boolean showDeltas = !(player instanceof IceStomPlayer deltaPlayer) || deltaPlayer.getShowDeltas();
+
+                if (showDeltas && result != null && result.splits().size() > checkpoint && checkpoint != 0) {
                     player.sendMessage(Component.translatable(
                             "message.timetrial.checkpoint_pass",
                             Argument.component("checkpoint", Component.text(checkpoint)),
@@ -203,7 +224,9 @@ public class VanillaInterface implements InterfaceProvider {
                 final Player player = event.getPlayer();
                 final TimeTrialingInstance instance = event.getInstance();
 
-                Component actionBar = event.getLap().getActionBar(instance.getWorldAge());
+                boolean showDeltas = !(player instanceof IceStomPlayer icePlayer) || icePlayer.getShowDeltas();
+
+                Component actionBar = event.getLap().getActionBar(instance.getWorldAge(), showDeltas);
 
                 player.sendActionBar(actionBar);
             });
@@ -214,7 +237,9 @@ public class VanillaInterface implements InterfaceProvider {
                 final TimedLapResultSource result = event.getResult();
                 final @Nullable TimedLapResultSource best = event.getLap().getBestPreviousResult();
 
-                player.playSound(PING);
+                boolean is_full_run = track.isLastCheckpoint(result.splits().size() - 1);
+
+                player.playSound(is_full_run ? TRACK_COMPLETE : PING);
 
                 player.sendMessage(lapCompletedMessage(
                         track,

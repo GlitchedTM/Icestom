@@ -24,6 +24,7 @@ import io.gitlab.icestom.icestom.timetrial.TimeTrialingInstance;
 import io.gitlab.icestom.icestom.track.library.TrackLibrary;
 import io.gitlab.icestom.icestom.ui.interfaces.InterfaceManager;
 import io.gitlab.icestom.icestom.ui.interfaces.impl.VanillaInterface;
+import io.gitlab.icestom.icestom.ui.menu.BoatSelectorMenu;
 import io.gitlab.icestom.icestom.ui.translation.TranslationManager;
 import me.lucko.spark.minestom.SparkMinestom;
 import net.kyori.adventure.key.Key;
@@ -236,6 +237,7 @@ public class IceStom {
         commandManager.register(new EventCommand());
         commandManager.register(new ResetCommand());
         commandManager.register(new GamemodeCommand());
+        commandManager.register(new SettingCommand());
 
         InstanceManager instanceManager = MinecraftServer.getInstanceManager();
         instanceManager.registerInstance(spawnInstance);
@@ -243,6 +245,8 @@ public class IceStom {
         ((SpawnInstance) spawnInstance).init();
 
         GlobalEventHandler globalEventHandler = MinecraftServer.getGlobalEventHandler();
+
+        BoatSelectorMenu.registerListener(globalEventHandler);
 
         globalEventHandler.addListener(AsyncPlayerConfigurationEvent.class, event -> {
             final Player player = event.getPlayer();

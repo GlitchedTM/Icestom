@@ -1,12 +1,53 @@
 .gradle
 build/
+**/build/
 !gradle/wrapper/gradle-wrapper.jar
 /run/*
 /run/**
 !/run/.gitkeep
 
+### Kiro ###
+.kiro/
+.kiro-cache/
+*.kiro
+
 ### IntelliJ IDEA ###
 .idea
+*.iml
+*.iws
+*.ipr
+out/
+
+### Eclipse ###
+.classpath
+.project
+.settings/
+bin/
+
+### VS Code ###
+.vscode/
+
+### NetBeans ###
+nbproject/
+nbbuild/
+nbdist/
 
 ### Mac OS ###
 .DS_Store
+
+### Windows ###
+Thumbs.db
+Desktop.ini
+
+### Logs ###
+*.log
+logs/
+
+### Environment / secrets ###
+.env
+*.env
+
+### Java ###
+*.class
+hs_err_pid*
+replay_pid*
