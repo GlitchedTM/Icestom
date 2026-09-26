@@ -270,7 +270,13 @@ public class IceStom {
         commandManager.register(new PanelCommand());
 
         InstanceManager instanceManager = MinecraftServer.getInstanceManager();
-        instanceManager.registerInstance(spawnInstance);
+        // A track-based spawn (e.g. a TCTS hub) is a SharedInstance and must be registered as one;
+        // registerInstance only accepts standalone containers like the default spawn.
+        if (spawnInstance instanceof net.minestom.server.instance.SharedInstance sharedSpawn) {
+            instanceManager.registerSharedInstance(sharedSpawn);
+        } else {
+            instanceManager.registerInstance(spawnInstance);
+        }
 
         ((SpawnInstance) spawnInstance).init();
 

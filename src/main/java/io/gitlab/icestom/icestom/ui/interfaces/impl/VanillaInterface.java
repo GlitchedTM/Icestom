@@ -18,6 +18,7 @@ import io.gitlab.icestom.icestom.track.Track;
 import io.gitlab.icestom.icestom.ui.TickCountdown;
 import io.gitlab.icestom.icestom.ui.event.GenericErrorMessageEvent;
 import io.gitlab.icestom.icestom.ui.event.GenericMessageEvent;
+import io.gitlab.icestom.icestom.ui.event.IceStomMessages;
 import io.gitlab.icestom.icestom.ui.interfaces.*;
 import io.gitlab.icestom.icestom.util.TextFormatter;
 import io.gitlab.icestom.icestom.util.UsernameCache;
@@ -166,17 +167,11 @@ public class VanillaInterface implements InterfaceProvider {
         public VanillaGeneralInterface(IceStom holder) {
             super(holder);
 
-            eventNode().addListener(GenericMessageEvent.class, event -> {
-                final Player player = event.getPlayer();
+            eventNode().addListener(GenericMessageEvent.class, event ->
+                    IceStomMessages.send(event.getPlayer(), IceStomMessages.GENERIC, event.getComponent()));
 
-                player.sendMessage(event.getComponent());
-            });
-
-            eventNode().addListener(GenericErrorMessageEvent.class, event -> {
-                final Player player = event.getPlayer();
-
-                player.sendMessage(event.getComponent());
-            });
+            eventNode().addListener(GenericErrorMessageEvent.class, event ->
+                    IceStomMessages.send(event.getPlayer(), IceStomMessages.GENERIC_ERROR, event.getComponent()));
         }
     }
 
@@ -193,7 +188,7 @@ public class VanillaInterface implements InterfaceProvider {
                 final int checkpoint = lap.getLastReachedCheckpoint();
 
                 if (result != null && result.splits().size() > checkpoint && checkpoint != 0) {
-                    player.sendMessage(Component.translatable(
+                    IceStomMessages.send(player, IceStomMessages.TIMETRIAL_CHECKPOINT_PASS, Component.translatable(
                             "message.timetrial.checkpoint_pass",
                             Argument.component("checkpoint", Component.text(checkpoint)),
                             Argument.component("time", TextFormatter.getTime(lap.getSplitTime(checkpoint))),
@@ -201,7 +196,7 @@ public class VanillaInterface implements InterfaceProvider {
                     ));
                 } else {
                     if (checkpoint != 0) {
-                        player.sendMessage(Component.translatable(
+                        IceStomMessages.send(player, IceStomMessages.TIMETRIAL_CHECKPOINT_PASS, Component.translatable(
                                 "message.timetrial.checkpoint_pass_no_delta",
                                 Argument.component("checkpoint", Component.text(checkpoint)),
                                 Argument.component("time", TextFormatter.getTime(lap.getSplitTime(checkpoint)))
@@ -215,7 +210,8 @@ public class VanillaInterface implements InterfaceProvider {
                 final Player player = event.getPlayer();
                 final Track track = event.getInstance().getTrack();
 
-                player.sendMessage(Component.translatable("message.timetrial.start", Argument.component("track", track.getName())));
+                IceStomMessages.send(player, IceStomMessages.TIMETRIAL_START,
+                        Component.translatable("message.timetrial.start", Argument.component("track", track.getName())));
 
                 Sidebar sidebar = sidebars.get(player);
 
@@ -245,7 +241,7 @@ public class VanillaInterface implements InterfaceProvider {
                 final TimedLapResultSource result = event.getResult();
                 final @Nullable TimedLapResultSource best = event.getLap().getBestPreviousResult();
 
-                player.sendMessage(lapCompletedMessage(
+                IceStomMessages.send(player, IceStomMessages.TIMETRIAL_LAP_COMPLETE, lapCompletedMessage(
                         track,
                         result,
                         best
@@ -257,13 +253,15 @@ public class VanillaInterface implements InterfaceProvider {
             eventNode().addListener(TimeTrialPracticePointCreateEvent.class, event -> {
                 final Player player = event.getPlayer();
 
-                player.sendMessage(Component.translatable("message.timetrial.practicepoint_place"));
+                IceStomMessages.send(player, IceStomMessages.TIMETRIAL_PRACTICEPOINT_PLACE,
+                        Component.translatable("message.timetrial.practicepoint_place"));
             });
 
             eventNode().addListener(TimeTrialPracticePointDeleteEvent.class, event -> {
                 final Player player = event.getPlayer();
 
-                player.sendMessage(Component.translatable("message.timetrial.practicepoint_remove"));
+                IceStomMessages.send(player, IceStomMessages.TIMETRIAL_PRACTICEPOINT_REMOVE,
+                        Component.translatable("message.timetrial.practicepoint_remove"));
             });
 
             eventNode().addListener(TimeTrialNewRecordEvent.class, event -> {
@@ -273,7 +271,7 @@ public class VanillaInterface implements InterfaceProvider {
                 final TimedLapResultSource result = event.getResult();
                 final TimedLapResultSource oldResult = event.getOldResult();
 
-                player.sendMessage(Component.translatable(
+                IceStomMessages.send(player, IceStomMessages.TIMETRIAL_GET_RECORD, Component.translatable(
                         "message.timetrial.get_record",
                         Argument.component("player", player.getName()),
                         Argument.component("track", track.getName()),
