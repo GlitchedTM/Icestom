@@ -23,9 +23,7 @@ import net.minestom.server.event.player.PlayerBlockBreakEvent;
 import net.minestom.server.event.player.PlayerBlockPlaceEvent;
 import net.minestom.server.event.player.PlayerPacketEvent;
 import net.minestom.server.instance.LightingChunk;
-import net.minestom.server.network.packet.client.common.ClientPongPacket;
-import net.minestom.server.network.packet.client.play.ClientVehicleMovePacket;
-import net.minestom.server.network.packet.server.common.PingPacket;
+
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -137,12 +135,6 @@ public abstract class TrackInstance extends BoatInstance implements SpawnLocatio
         }
 
         onPlayerMovements(movementMap, inside_tags, crossed_triggers);
-
-        for (Player player : getPlayers()) {
-            if (shouldTrackPlayer(player)) {
-                player.sendPacket(new PingPacket((int) getWorldAge()));
-            }
-        }
     }
 
     @Override
