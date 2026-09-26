@@ -16,12 +16,7 @@ import org.jetbrains.annotations.NotNull;
 public class Boat extends Entity {
 
     public Boat(Key type) {
-        if (!type.namespace().equals(Key.MINECRAFT_NAMESPACE)) {
-            /* Should probably check that it is actually a boat but oh well, this should catch anyone failing to rewrite the key in a custom handler */
-            throw new RuntimeException("Invalid boat type " + type);
-        }
-
-        super(EntityType.OAK_BOAT);
+        super(resolveBoatType(type));
 
         hasPhysics = false;
 
@@ -36,6 +31,25 @@ public class Boat extends Entity {
                 teleport(clientVehicleMovePacket.position());
             }
         });
+    }
+
+    // Resolves a boat_type preference key to its boat entity type. Non-minecraft keys are rejected
+    // (a custom handler should have rewritten them); an unknown or non-boat key falls back to oak
+    // rather than crashing the join.
+    private static EntityType resolveBoatType(Key type) {
+        if (!type.namespace().equals(Key.MINECRAFT_NAMESPACE)) {
+            throw new RuntimeException("Invalid boat type " + type);
+        }
+
+        EntityType entityType = EntityType.fromKey(type);
+        String path = type.value();
+        boolean isBoat = path.endsWith("_boat") || path.endsWith("_raft");
+
+        if (entityType == null || !isBoat) {
+            return EntityType.OAK_BOAT;
+        }
+
+        return entityType;
     }
 
     @Override
